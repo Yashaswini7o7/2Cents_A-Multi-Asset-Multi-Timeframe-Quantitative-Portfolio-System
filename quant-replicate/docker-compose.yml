@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  quant-agent:
+    build: ./docker
+    volumes:
+      - ./:/app
+      - ./results:/app/results
+    environment:
+      - CONFIG_PATH=/app/configs/config.yaml
+    restart: "no"
