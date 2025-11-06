@@ -10,7 +10,7 @@ import json, os, sys
 from collections import defaultdict
 from datetime import datetime
 
-def load_ndjson(path):
+"""def load_ndjson(path):
     items = []
     if not os.path.exists(path):
         return items
@@ -18,6 +18,51 @@ def load_ndjson(path):
         for line in f:
             if not line.strip(): continue
             items.append(json.loads(line))
+    return items
+    """
+
+def load_ndjson(path):
+    """
+    Robust NDJSON loader.
+    - If file missing -> returns empty list
+    - For each physical line:
+        * try json.loads(line) (fast path)
+        * otherwise attempt to parse multiple JSON objects from the line using raw_decode
+    - Skips empty lines and logs/parses as many valid objects as possible (best-effort).
+    """
+    items = []
+    if not os.path.exists(path):
+        return items
+    decoder = json.JSONDecoder()
+    with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        for lineno, raw in enumerate(f, start=1):
+            s = raw.strip()
+            if not s:
+                continue
+            # Fast path: normal ndjson single object per line
+            try:
+                obj = json.loads(s)
+                items.append(obj)
+                continue
+            except json.JSONDecodeError:
+                pass
+            # Fallback: try to decode multiple JSON objects from the same line
+            idx = 0
+            L = len(s)
+            while idx < L:
+                try:
+                    obj, end = decoder.raw_decode(s, idx)
+                except json.JSONDecodeError:
+                    # cannot decode further from this line: log minimal info and break
+                    # (we don't raise to allow other lines to be processed)
+                    # Optionally: write a small debug message to stderr or to a .log file
+                    # print(f"[load_ndjson] JSONDecodeError at {path}:{lineno} idx={idx}", file=sys.stderr)
+                    break
+                items.append(obj)
+                idx = end
+                # skip whitespace between consecutive objects
+                while idx < L and s[idx].isspace():
+                    idx += 1
     return items
 
 def summarize_trades(fills):
