@@ -1,9 +1,0 @@
-pandas
-numpy
-optuna
-quantstats
-matplotlib
-ccxt
-ib_insync
-kiteconnect
-pytest
